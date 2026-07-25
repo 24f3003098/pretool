@@ -60,6 +60,21 @@ def normalize_path(raw: str, base: str = WORKSPACE) -> str:
         raw = HOME
     elif raw.startswith("~/"):
         raw = HOME + raw[1:]
+
+    # The policy describes the allowed write area as "/workspace/output/",
+    # which is a container-style alias for the agent's actual working
+    # directory (/home/agent/workspace) -- the same convention used by
+    # most agent sandboxes ("/workspace" == the cwd root). Resolve that
+    # alias BEFORE normalizing, both for absolute-looking paths
+    # ("/workspace/output/x") and bare relative ones that spell it out
+    # ("workspace/output/x"), so traversal through the alias collapses
+    # to the real filesystem location instead of a fake root that
+    # coincidentally avoids matching anything.
+    if raw == "/workspace" or raw.startswith("/workspace/"):
+        raw = WORKSPACE + raw[len("/workspace"):]
+    elif raw == "workspace" or raw.startswith("workspace/"):
+        raw = WORKSPACE + raw[len("workspace"):]
+
     if not raw.startswith("/"):
         raw = os.path.join(base, raw)
     return os.path.normpath(raw)
