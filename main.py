@@ -13,7 +13,7 @@ import base64
 import os
 import re
 from typing import Optional
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +55,18 @@ def normalize_path(raw: str, base: str = WORKSPACE) -> str:
     """Turn a raw path-ish string into a clean absolute path, the way the
     shell/OS would actually resolve it."""
     raw = raw.strip().strip('"').strip("'")
+
+    # Percent-decode first (repeatedly, to catch double-encoding like
+    # "%252e%252e") so an obfuscated traversal such as
+    # "output/%2e%2e/%2e%2e/.env" is treated as the "../../.env" it
+    # actually is, instead of slipping through as a literal, harmless-
+    # looking filename that happens to contain percent signs.
+    for _ in range(3):
+        decoded = unquote(raw)
+        if decoded == raw:
+            break
+        raw = decoded
+
     raw = raw.replace("${HOME}", HOME).replace("$HOME", HOME)
     if raw == "~":
         raw = HOME
