@@ -61,6 +61,17 @@ def normalize_path(raw: str, base: str = WORKSPACE) -> str:
     elif raw.startswith("~/"):
         raw = HOME + raw[1:]
 
+    # os.path.normpath has a POSIX quirk: a path starting with EXACTLY two
+    # slashes ("//foo") is left as-is instead of being collapsed to one,
+    # even though on a real filesystem "//foo" and "/foo" are the same
+    # place. Left unhandled, that quirk makes an ordinary path like
+    # "//workspace/output/x" silently fail every prefix check below.
+    # Collapse any run of 2+ leading slashes to a single slash first so
+    # normalization is consistent regardless of how many slashes the
+    # caller happened to type.
+    if raw.startswith("//"):
+        raw = "/" + raw.lstrip("/")
+
     # The policy describes the allowed write area as "/workspace/output/",
     # which is a container-style alias for the agent's actual working
     # directory (/home/agent/workspace) -- the same convention used by
