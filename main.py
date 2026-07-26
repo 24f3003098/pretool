@@ -168,7 +168,11 @@ def check_write(path: str):
     except Exception:
         return "block", "Could not safely resolve the target path."
     allowed_prefix = ALLOWED_WRITE_DIR + os.sep
-    if norm == ALLOWED_WRITE_DIR or norm.startswith(allowed_prefix):
+    # Strictly require a subpath of the output directory. The policy says
+    # "write files INSIDE /workspace/output/" -- the directory boundary
+    # itself (no filename underneath it) is not a file inside it, so it
+    # must not be treated as an allowed write target.
+    if norm.startswith(allowed_prefix):
         return "allow", "Write target is inside the allowed output directory."
     return "block", "Writes are only permitted inside workspace/output/."
 
